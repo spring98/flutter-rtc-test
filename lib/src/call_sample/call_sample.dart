@@ -35,7 +35,7 @@ class _CallSampleState extends State<CallSample> {
   @override
   initState() {
     super.initState();
-    // local 화면과 remote 화면 초기화 //
+    // local 화면과 remote 화면 초기화 /////
     initRenderers();
     //
     _connect();
