@@ -15,10 +15,16 @@ class CallSample extends StatefulWidget {
 class _CallSampleState extends State<CallSample> {
   Signaling? _signaling;
   List<dynamic> _peers = [];
+
+  // 호스트 주소가 적절하다면 (시그널 서버로 호스팅) 되면 selfId 에 값이 생김
   String? _selfId;
+
   RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+
+  // 다른 사람과 연결이 되면 inCalling 참으로 바뀜
   bool _inCalling = false;
+
   Session? _session;
 
   bool _waitAccept = false;
@@ -29,13 +35,10 @@ class _CallSampleState extends State<CallSample> {
   @override
   initState() {
     super.initState();
+    // local 화면과 remote 화면 초기화 //
     initRenderers();
+    //
     _connect();
-  }
-
-  initRenderers() async {
-    await _localRenderer.initialize();
-    await _remoteRenderer.initialize();
   }
 
   @override
@@ -44,6 +47,88 @@ class _CallSampleState extends State<CallSample> {
     _signaling?.close();
     _localRenderer.dispose();
     _remoteRenderer.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('P2P Call Sample' +
+            (_selfId != null ? ' [Your ID ($_selfId)] ' : '')),
+        actions: <Widget>[
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: null,
+            tooltip: 'setup',
+          ),
+        ],
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: _inCalling
+          ? SizedBox(
+              width: 200.0,
+              child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    FloatingActionButton(
+                      child: const Icon(Icons.switch_camera),
+                      onPressed: _switchCamera,
+                    ),
+                    FloatingActionButton(
+                      onPressed: _hangUp,
+                      tooltip: 'Hangup',
+                      child: Icon(Icons.call_end),
+                      backgroundColor: Colors.pink,
+                    ),
+                    FloatingActionButton(
+                      child: const Icon(Icons.mic_off),
+                      onPressed: _muteMic,
+                    )
+                  ]))
+          : null,
+      body: _inCalling
+          ? OrientationBuilder(builder: (context, orientation) {
+              return Container(
+                child: Stack(children: <Widget>[
+                  Positioned(
+                      left: 0.0,
+                      right: 0.0,
+                      top: 0.0,
+                      bottom: 0.0,
+                      child: Container(
+                        margin: EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 0.0),
+                        width: MediaQuery.of(context).size.width,
+                        height: MediaQuery.of(context).size.height,
+                        child: RTCVideoView(_remoteRenderer),
+                        decoration: BoxDecoration(color: Colors.black54),
+                      )),
+                  Positioned(
+                    left: 20.0,
+                    top: 20.0,
+                    child: Container(
+                      width: orientation == Orientation.portrait ? 90.0 : 120.0,
+                      height:
+                          orientation == Orientation.portrait ? 120.0 : 90.0,
+                      child: RTCVideoView(_localRenderer, mirror: true),
+                      decoration: BoxDecoration(color: Colors.black54),
+                    ),
+                  ),
+                ]),
+              );
+            })
+          : ListView.builder(
+              shrinkWrap: true,
+              padding: const EdgeInsets.all(0.0),
+              itemCount: (_peers != null ? _peers.length : 0),
+              itemBuilder: (context, i) {
+                return _buildRow(context, _peers[i]);
+              }),
+    );
+  }
+
+  initRenderers() async {
+    await _localRenderer.initialize();
+    await _remoteRenderer.initialize();
   }
 
   void _connect() async {
@@ -71,8 +156,7 @@ class _CallSampleState extends State<CallSample> {
             setState(() {
               _inCalling = true;
             });
-          }
-          else {
+          } else {
             _reject();
           }
           break;
@@ -164,8 +248,7 @@ class _CallSampleState extends State<CallSample> {
               onPressed: () {
                 Navigator.of(context).pop(false);
                 _hangUp();
-                },
-
+              },
             ),
           ],
         );
@@ -235,82 +318,5 @@ class _CallSampleState extends State<CallSample> {
       ),
       Divider()
     ]);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('P2P Call Sample' +
-            (_selfId != null ? ' [Your ID ($_selfId)] ' : '')),
-        actions: <Widget>[
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: null,
-            tooltip: 'setup',
-          ),
-        ],
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: _inCalling
-          ? SizedBox(
-              width: 200.0,
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    FloatingActionButton(
-                      child: const Icon(Icons.switch_camera),
-                      onPressed: _switchCamera,
-                    ),
-                    FloatingActionButton(
-                      onPressed: _hangUp,
-                      tooltip: 'Hangup',
-                      child: Icon(Icons.call_end),
-                      backgroundColor: Colors.pink,
-                    ),
-                    FloatingActionButton(
-                      child: const Icon(Icons.mic_off),
-                      onPressed: _muteMic,
-                    )
-                  ]))
-          : null,
-      body: _inCalling
-          ? OrientationBuilder(builder: (context, orientation) {
-              return Container(
-                child: Stack(children: <Widget>[
-                  Positioned(
-                      left: 0.0,
-                      right: 0.0,
-                      top: 0.0,
-                      bottom: 0.0,
-                      child: Container(
-                        margin: EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 0.0),
-                        width: MediaQuery.of(context).size.width,
-                        height: MediaQuery.of(context).size.height,
-                        child: RTCVideoView(_remoteRenderer),
-                        decoration: BoxDecoration(color: Colors.black54),
-                      )),
-                  Positioned(
-                    left: 20.0,
-                    top: 20.0,
-                    child: Container(
-                      width: orientation == Orientation.portrait ? 90.0 : 120.0,
-                      height:
-                          orientation == Orientation.portrait ? 120.0 : 90.0,
-                      child: RTCVideoView(_localRenderer, mirror: true),
-                      decoration: BoxDecoration(color: Colors.black54),
-                    ),
-                  ),
-                ]),
-              );
-            })
-          : ListView.builder(
-              shrinkWrap: true,
-              padding: const EdgeInsets.all(0.0),
-              itemCount: (_peers != null ? _peers.length : 0),
-              itemBuilder: (context, i) {
-                return _buildRow(context, _peers[i]);
-              }),
-    );
   }
 }
